@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { FiHome, FiBookOpen, FiSettings, FiSearch, FiSend, FiPlus, FiX, FiExternalLink, FiClock, FiMail, FiChevronDown, FiChevronUp, FiPlay, FiPause, FiRefreshCw, FiCheckCircle, FiAlertCircle, FiBookmark, FiHash, FiCalendar, FiActivity, FiZap, FiChevronLeft } from 'react-icons/fi'
+import { FiHome, FiBookOpen, FiSettings, FiSearch, FiSend, FiPlus, FiX, FiExternalLink, FiClock, FiMail, FiChevronDown, FiChevronUp, FiPlay, FiPause, FiRefreshCw, FiCheckCircle, FiAlertCircle, FiBookmark, FiHash, FiCalendar, FiActivity, FiZap, FiChevronRight, FiArrowRight, FiCheck } from 'react-icons/fi'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -29,6 +29,25 @@ const LS_TOPICS_KEY = 'arxiv_monitor_topics'
 const LS_EMAIL_KEY = 'arxiv_monitor_email'
 const LS_PREFS_KEY = 'arxiv_monitor_prefs'
 const LS_LAST_DIGEST_KEY = 'arxiv_monitor_last_digest'
+const LS_ONBOARDED_KEY = 'arxiv_monitor_onboarded'
+
+const ARXIV_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/7/7a/ArXiv_logo_2022.png'
+
+// Sidebar dark theme inline styles
+const SIDEBAR_BG = { backgroundColor: 'hsl(220, 20%, 8%)' }
+const SIDEBAR_BORDER = { borderColor: 'hsl(220, 15%, 15%)' }
+const SIDEBAR_HOVER_BG = 'hsl(220, 15%, 15%)'
+const SIDEBAR_TEXT = { color: 'hsl(40, 15%, 82%)' }
+const SIDEBAR_TEXT_MUTED = { color: 'hsl(220, 10%, 50%)' }
+const SIDEBAR_TEXT_ACTIVE = { color: 'hsl(40, 15%, 96%)' }
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'Computer Science': 'hsl(355, 75%, 42%)',
+  'Physics': 'hsl(220, 70%, 45%)',
+  'Mathematics': 'hsl(280, 45%, 50%)',
+  'Biology': 'hsl(150, 50%, 38%)',
+  'AI Safety & Alignment': 'hsl(180, 45%, 35%)',
+}
 
 const SUGGESTED_TOPICS: Record<string, string[]> = {
   'Computer Science': [
@@ -259,7 +278,7 @@ class ErrorBoundary extends React.Component<
             <p className="text-muted-foreground mb-4 text-sm">{this.state.error}</p>
             <button
               onClick={() => this.setState({ hasError: false, error: '' })}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-none text-sm"
+              className="px-4 py-2 bg-primary text-primary-foreground text-sm"
             >
               Try again
             </button>
@@ -302,6 +321,241 @@ function computeNextScheduledRun(): string {
 }
 
 // ---------------------------------------------------------------------------
+// Onboarding Wizard
+// ---------------------------------------------------------------------------
+
+function OnboardingWizard({
+  onComplete,
+  addTopics,
+  setEmailFn,
+}: {
+  onComplete: () => void
+  addTopics: (topics: string[]) => void
+  setEmailFn: (email: string) => void
+}) {
+  const [step, setStep] = useState(0)
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
+  const [emailInput, setEmailInput] = useState('')
+
+  const toggleTopic = (topic: string) => {
+    setSelectedTopics(prev =>
+      prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic]
+    )
+  }
+
+  const handleComplete = () => {
+    addTopics(selectedTopics)
+    if (emailInput.trim()) {
+      setEmailFn(emailInput.trim())
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LS_ONBOARDED_KEY, 'true')
+    }
+    onComplete()
+  }
+
+  const handleSkipEmail = () => {
+    addTopics(selectedTopics)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LS_ONBOARDED_KEY, 'true')
+    }
+    onComplete()
+  }
+
+  const stepIndicators = (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {[0, 1, 2].map(s => (
+        <div
+          key={s}
+          className={cn('w-2 h-2 transition-all duration-300', s === step ? 'w-6 bg-primary' : s < step ? 'bg-primary/60' : 'bg-border')}
+        />
+      ))}
+    </div>
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(355, 75%, 42%, 0.08) 0%, hsl(220, 20%, 96%) 40%, hsl(180, 45%, 35%, 0.06) 100%)' }}>
+      <div className="w-full max-w-2xl mx-4">
+        <Card className="border border-border bg-card shadow-none">
+          <CardContent className="p-8 md:p-12">
+            {stepIndicators}
+
+            {step === 0 && (
+              <div className="text-center">
+                <div className="mb-6 flex justify-center">
+                  <img
+                    src={ARXIV_LOGO_URL}
+                    alt="arXiv"
+                    className="h-10 object-contain"
+                  />
+                </div>
+                <h1 className="font-serif text-3xl font-bold tracking-[-0.03em] mb-3">
+                  Welcome to Research Monitor
+                </h1>
+                <p className="text-muted-foreground font-sans text-sm leading-relaxed max-w-md mx-auto mb-8">
+                  Stay on top of the latest research. Select your topics of interest, and we will deliver curated paper digests from ArXiv straight to your inbox every Monday.
+                </p>
+                <Button
+                  className="shadow-none font-sans gap-2 px-8 py-5 text-sm"
+                  onClick={() => setStep(1)}
+                >
+                  Get Started
+                  <FiArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {step === 1 && (
+              <div>
+                <div className="text-center mb-8">
+                  <h2 className="font-serif text-2xl font-bold tracking-[-0.03em] mb-2">
+                    What research areas interest you?
+                  </h2>
+                  <p className="text-muted-foreground font-sans text-sm">
+                    Select at least one topic to continue.
+                    {selectedTopics.length > 0 && (
+                      <span className="ml-2 text-primary font-medium">{selectedTopics.length} selected</span>
+                    )}
+                  </p>
+                </div>
+
+                <div className="space-y-5 max-h-[400px] overflow-y-auto pr-1">
+                  {Object.entries(SUGGESTED_TOPICS).map(([category, catTopics]) => (
+                    <div key={category}>
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="w-2 h-2" style={{ backgroundColor: CATEGORY_COLORS[category] ?? 'hsl(220, 10%, 45%)' }} />
+                        <h4 className="font-sans text-xs font-semibold uppercase tracking-widest" style={{ color: CATEGORY_COLORS[category] ?? 'hsl(220, 10%, 45%)' }}>
+                          {category}
+                        </h4>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {catTopics.map(topic => {
+                          const isSelected = selectedTopics.includes(topic)
+                          return (
+                            <button
+                              key={topic}
+                              onClick={() => toggleTopic(topic)}
+                              className={cn(
+                                'text-xs font-sans px-3 py-1.5 border transition-all duration-150',
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-card text-foreground border-border hover:border-primary/40'
+                              )}
+                            >
+                              {isSelected && <FiCheck className="w-3 h-3 inline mr-1" />}
+                              {topic}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end mt-8">
+                  <Button
+                    className="shadow-none font-sans gap-2 px-6"
+                    disabled={selectedTopics.length === 0}
+                    onClick={() => setStep(2)}
+                  >
+                    Continue
+                    <FiArrowRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div>
+                <div className="text-center mb-8">
+                  <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: 'hsl(355, 75%, 42%, 0.1)' }}>
+                    <FiMail className="w-6 h-6 text-primary" />
+                  </div>
+                  <h2 className="font-serif text-2xl font-bold tracking-[-0.03em] mb-2">
+                    Where should we send your digest?
+                  </h2>
+                  <p className="text-muted-foreground font-sans text-sm">
+                    You will receive a curated paper digest every Monday at 8:00 AM IST.
+                  </p>
+                </div>
+
+                <div className="max-w-sm mx-auto space-y-4">
+                  <div>
+                    <Label className="font-sans text-sm mb-1.5 block">Email Address</Label>
+                    <Input
+                      type="email"
+                      placeholder="you@university.edu"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      className="shadow-none font-sans"
+                    />
+                  </div>
+
+                  <Button
+                    className="w-full shadow-none font-sans gap-2"
+                    onClick={handleComplete}
+                    disabled={!emailInput.trim()}
+                  >
+                    <FiCheckCircle className="w-4 h-4" />
+                    Complete Setup
+                  </Button>
+
+                  <button
+                    onClick={handleSkipEmail}
+                    className="w-full text-center text-sm text-muted-foreground font-sans hover:text-foreground transition-colors py-2"
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Header Bar
+// ---------------------------------------------------------------------------
+
+function HeaderBar({
+  screenTitle,
+  email,
+  scheduleActive,
+}: {
+  screenTitle: string
+  email: string
+  scheduleActive: boolean | null
+}) {
+  return (
+    <div className="h-12 flex-shrink-0 border-b border-border bg-card flex items-center justify-between px-6">
+      <h2 className="font-serif text-sm font-bold tracking-[-0.02em]">{screenTitle}</h2>
+      <div className="flex items-center gap-3 text-xs font-sans">
+        {email && (
+          <>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <FiMail className="w-3 h-3" />
+              <span>{email}</span>
+            </div>
+            <span className="text-border">|</span>
+          </>
+        )}
+        {scheduleActive !== null && (
+          <div className="flex items-center gap-1.5">
+            <div className={cn('w-1.5 h-1.5 rounded-full', scheduleActive ? 'bg-green-500' : 'bg-amber-500')} />
+            <span className={cn('font-medium', scheduleActive ? 'text-green-700' : 'text-amber-700')}>
+              {scheduleActive ? 'Active' : 'Paused'}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
@@ -314,17 +568,17 @@ function PaperCard({ paper, expandedId, onToggle }: {
   const isExpanded = expandedId === paperId
 
   return (
-    <div className="border border-border p-4 mb-3 bg-card">
+    <div className="border border-border p-4 mb-3 bg-card hover:border-primary/20 transition-colors group">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <a
             href={paper?.arxiv_link ?? '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-serif text-sm font-bold tracking-tight hover:underline decoration-1 underline-offset-2 inline-flex items-center gap-1"
+            className="font-serif text-sm font-bold tracking-[-0.02em] hover:text-primary transition-colors inline-flex items-center gap-1.5"
           >
             {paper?.title ?? 'Untitled'}
-            <FiExternalLink className="w-3 h-3 flex-shrink-0 text-muted-foreground" />
+            <FiExternalLink className="w-3 h-3 flex-shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </a>
           <p className="text-xs text-muted-foreground mt-1 font-sans">
             {paper?.authors ?? 'Unknown authors'}
@@ -333,8 +587,8 @@ function PaperCard({ paper, expandedId, onToggle }: {
       </div>
 
       {paper?.key_insight && (
-        <div className="mt-3 border-l-2 pl-3" style={{ borderColor: 'hsl(0, 80%, 45%)' }}>
-          <p className="text-xs font-sans font-medium" style={{ color: 'hsl(0, 80%, 45%)' }}>
+        <div className="mt-3 border-l-2 pl-3" style={{ borderColor: 'hsl(180, 45%, 35%)' }}>
+          <p className="text-xs font-sans font-semibold uppercase tracking-widest" style={{ color: 'hsl(180, 45%, 35%)' }}>
             Key Insight
           </p>
           <p className="text-sm font-sans leading-relaxed mt-0.5">
@@ -349,7 +603,7 @@ function PaperCard({ paper, expandedId, onToggle }: {
             const trimmed = cat.trim()
             if (!trimmed) return null
             return (
-              <Badge key={idx} variant="secondary" className="text-xs rounded-none font-mono px-1.5 py-0">
+              <Badge key={idx} variant="secondary" className="text-xs font-mono px-1.5 py-0">
                 {trimmed}
               </Badge>
             )
@@ -357,7 +611,7 @@ function PaperCard({ paper, expandedId, onToggle }: {
         </div>
         <button
           onClick={() => onToggle(paperId)}
-          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 font-sans"
+          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 font-sans transition-colors"
         >
           {isExpanded ? 'Hide abstract' : 'Show abstract'}
           {isExpanded ? <FiChevronUp className="w-3 h-3" /> : <FiChevronDown className="w-3 h-3" />}
@@ -380,9 +634,9 @@ function DigestPreviewSkeleton() {
     <div className="space-y-6 p-4">
       {[1, 2, 3].map((i) => (
         <div key={i} className="space-y-3">
-          <Skeleton className="h-5 w-48 rounded-none" />
-          <Skeleton className="h-24 w-full rounded-none" />
-          <Skeleton className="h-24 w-full rounded-none" />
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
         </div>
       ))}
     </div>
@@ -398,7 +652,7 @@ function StatusMessage({ type, message }: { type: 'success' | 'error' | 'info'; 
   }
   const c = config[type]
   return (
-    <div className={cn('flex items-center gap-2 p-3 border text-sm font-sans rounded-none', c.bg)}>
+    <div className={cn('flex items-center gap-2 p-3 border text-sm font-sans', c.bg)}>
       {c.icon}
       <span>{message}</span>
     </div>
@@ -420,10 +674,10 @@ function TopicSection({ topicResult, expandedPaper, onTogglePaper }: {
         className="flex items-center justify-between w-full text-left mb-3"
       >
         <div className="flex items-center gap-2">
-          <h3 className="font-serif text-lg font-bold tracking-tight">
+          <h3 className="font-serif text-lg font-bold tracking-[-0.03em]">
             {topicResult?.topic ?? 'Unknown Topic'}
           </h3>
-          <Badge variant="secondary" className="rounded-none font-mono text-xs">
+          <Badge variant="secondary" className="font-mono text-xs">
             {topicResult?.papers_found ?? 0}
           </Badge>
         </div>
@@ -509,55 +763,55 @@ function DashboardScreen({
 
   return (
     <div className="flex-1 overflow-y-auto p-6 lg:p-8">
-      {/* Header */}
+      {/* Hero heading */}
       <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="font-sans text-muted-foreground mt-1 text-sm leading-relaxed">
+        <h1 className="font-serif text-4xl font-bold tracking-[-0.03em] mb-1">Dashboard</h1>
+        <p className="font-sans text-muted-foreground text-sm leading-relaxed">
           Monitor and manage your ArXiv research digest pipeline.
         </p>
       </div>
 
       {/* Status Bar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card className="border rounded-none shadow-none">
+        <Card className="border shadow-none relative overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-secondary">
-                <FiClock className="w-4 h-4 text-foreground" />
+              <div className="p-2.5" style={{ backgroundColor: 'hsl(355, 75%, 42%, 0.08)' }}>
+                <FiClock className="w-4 h-4" style={{ color: 'hsl(355, 75%, 42%)' }} />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-sans uppercase tracking-wide">Last Digest Sent</p>
-                <p className="text-sm font-sans font-medium mt-0.5">
+                <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest font-medium">Last Digest</p>
+                <p className="text-sm font-sans font-semibold mt-0.5">
                   {lastDigest || 'Never'}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border rounded-none shadow-none">
+        <Card className="border shadow-none relative overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-secondary">
-                <FiCalendar className="w-4 h-4 text-foreground" />
+              <div className="p-2.5" style={{ backgroundColor: 'hsl(180, 45%, 35%, 0.08)' }}>
+                <FiCalendar className="w-4 h-4" style={{ color: 'hsl(180, 45%, 35%)' }} />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-sans uppercase tracking-wide">Next Scheduled</p>
-                <p className="text-sm font-sans font-medium mt-0.5">
+                <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest font-medium">Next Scheduled</p>
+                <p className="text-sm font-sans font-semibold mt-0.5">
                   {nextRun || 'Calculating...'}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border rounded-none shadow-none">
+        <Card className="border shadow-none relative overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-secondary">
-                <FiBookmark className="w-4 h-4 text-foreground" />
+              <div className="p-2.5" style={{ backgroundColor: 'hsl(355, 75%, 42%, 0.08)' }}>
+                <FiBookmark className="w-4 h-4" style={{ color: 'hsl(355, 75%, 42%)' }} />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-sans uppercase tracking-wide">Active Topics</p>
-                <p className="text-sm font-sans font-medium mt-0.5">
+                <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest font-medium">Active Topics</p>
+                <p className="text-sm font-sans font-semibold mt-0.5">
                   {topics.length} topic{topics.length !== 1 ? 's' : ''} tracked
                 </p>
               </div>
@@ -573,9 +827,9 @@ function DashboardScreen({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Topics + Actions */}
         <div className="lg:col-span-1 space-y-6">
-          <Card className="border rounded-none shadow-none">
+          <Card className="border shadow-none">
             <CardHeader className="pb-3">
-              <CardTitle className="font-serif text-base tracking-tight">Active Topics</CardTitle>
+              <CardTitle className="font-serif text-base tracking-[-0.02em]">Active Topics</CardTitle>
             </CardHeader>
             <CardContent>
               {topics.length === 0 ? (
@@ -585,7 +839,7 @@ function DashboardScreen({
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {topics.map((topic) => (
-                    <Badge key={topic} variant="outline" className="rounded-none font-sans text-xs px-2 py-1">
+                    <Badge key={topic} variant="outline" className="font-sans text-xs px-2 py-1">
                       {topic}
                     </Badge>
                   ))}
@@ -594,14 +848,14 @@ function DashboardScreen({
             </CardContent>
           </Card>
 
-          <Card className="border rounded-none shadow-none">
+          <Card className="border shadow-none">
             <CardHeader className="pb-3">
-              <CardTitle className="font-serif text-base tracking-tight">Actions</CardTitle>
+              <CardTitle className="font-serif text-base tracking-[-0.02em]">Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
                 variant="outline"
-                className="w-full rounded-none shadow-none justify-start gap-2 font-sans"
+                className="w-full shadow-none justify-start gap-2 font-sans"
                 disabled={loading || topics.length === 0}
                 onClick={onPreview}
               >
@@ -609,7 +863,7 @@ function DashboardScreen({
                 Preview Digest
               </Button>
               <Button
-                className="w-full rounded-none shadow-none justify-start gap-2 font-sans"
+                className="w-full shadow-none justify-start gap-2 font-sans"
                 disabled={loading || topics.length === 0}
                 onClick={onSendNow}
               >
@@ -627,10 +881,12 @@ function DashboardScreen({
 
         {/* Right: Digest Preview */}
         <div className="lg:col-span-2">
-          <Card className="border rounded-none shadow-none">
+          <Card className="border shadow-none overflow-hidden">
+            {/* Accent line at top */}
+            <div className="h-0.5 w-full bg-primary" />
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="font-serif text-base tracking-tight">
+                <CardTitle className="font-serif text-base tracking-[-0.02em]">
                   Digest Preview
                 </CardTitle>
                 {displayResponse && (
@@ -653,7 +909,7 @@ function DashboardScreen({
               {loading ? (
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <FiRefreshCw className="w-4 h-4 animate-spin" />
+                    <FiRefreshCw className="w-4 h-4 animate-spin text-primary" />
                     <span className="text-sm font-sans text-muted-foreground">{loadingText}</span>
                   </div>
                   <DigestPreviewSkeleton />
@@ -664,11 +920,11 @@ function DashboardScreen({
                     {/* Mode badge */}
                     {displayResponse.mode && (
                       <div className="flex items-center gap-2">
-                        <Badge variant={displayResponse.mode === 'full_digest' ? 'default' : 'secondary'} className="rounded-none font-sans text-xs">
+                        <Badge variant={displayResponse.mode === 'full_digest' ? 'default' : 'secondary'} className="font-sans text-xs">
                           {displayResponse.mode === 'full_digest' ? 'Full Digest' : 'Preview Only'}
                         </Badge>
                         {displayResponse.email_sent && (
-                          <Badge variant="outline" className="rounded-none font-sans text-xs border-green-300 text-green-700">
+                          <Badge variant="outline" className="font-sans text-xs border-green-300 text-green-700">
                             Email Sent
                           </Badge>
                         )}
@@ -695,11 +951,16 @@ function DashboardScreen({
                   </div>
                 </ScrollArea>
               ) : (
-                <div className="p-12 text-center">
-                  <FiBookOpen className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground font-sans leading-relaxed">
+                <div className="p-16 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: 'hsl(355, 75%, 42%, 0.06)' }}>
+                    <FiBookOpen className="w-7 h-7 text-primary" />
+                  </div>
+                  <p className="text-sm font-sans font-medium mb-1">
+                    {topics.length === 0 ? 'No topics configured' : 'Ready to search'}
+                  </p>
+                  <p className="text-sm text-muted-foreground font-sans leading-relaxed max-w-xs mx-auto">
                     {topics.length === 0
-                      ? 'No topics added yet. Head to Topics to get started.'
+                      ? 'Head to Topics to add your research interests, then return here to preview your digest.'
                       : 'Click "Preview Digest" to search ArXiv for your tracked topics.'}
                   </p>
                 </div>
@@ -747,16 +1008,16 @@ function TopicsScreen({
       <div className="max-w-3xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-serif text-3xl font-bold tracking-tight">Topics</h1>
-          <p className="font-sans text-muted-foreground mt-1 text-sm leading-relaxed">
+          <h1 className="font-serif text-4xl font-bold tracking-[-0.03em] mb-1">Topics</h1>
+          <p className="font-sans text-muted-foreground text-sm leading-relaxed">
             Manage the research topics you want to monitor on ArXiv.
           </p>
         </div>
 
         {/* Active Topics */}
-        <Card className="border rounded-none shadow-none mb-8">
+        <Card className="border shadow-none mb-8">
           <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base tracking-tight">
+            <CardTitle className="font-serif text-base tracking-[-0.02em]">
               Your Active Topics
               {topics.length > 0 && (
                 <span className="ml-2 text-muted-foreground font-sans text-sm font-normal">
@@ -768,16 +1029,21 @@ function TopicsScreen({
           <Separator />
           <CardContent className="pt-4">
             {topics.length === 0 ? (
-              <p className="text-sm text-muted-foreground font-sans">
-                No topics added yet. Add custom topics or browse suggestions below.
-              </p>
+              <div className="py-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: 'hsl(355, 75%, 42%, 0.06)' }}>
+                  <FiBookmark className="w-5 h-5 text-primary" />
+                </div>
+                <p className="text-sm text-muted-foreground font-sans">
+                  No topics added yet. Add custom topics or browse suggestions below.
+                </p>
+              </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {topics.map((topic) => (
                   <Badge
                     key={topic}
                     variant="outline"
-                    className="rounded-none font-sans text-sm px-3 py-1.5 flex items-center gap-1.5"
+                    className="font-sans text-sm px-3 py-1.5 flex items-center gap-1.5"
                   >
                     {topic}
                     <button
@@ -794,9 +1060,9 @@ function TopicsScreen({
         </Card>
 
         {/* Add Custom Topic */}
-        <Card className="border rounded-none shadow-none mb-8">
+        <Card className="border shadow-none mb-8">
           <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base tracking-tight">Add Custom Topic</CardTitle>
+            <CardTitle className="font-serif text-base tracking-[-0.02em]">Add Custom Topic</CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-4">
@@ -806,12 +1072,12 @@ function TopicsScreen({
                 value={newTopic}
                 onChange={(e) => setNewTopic(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="rounded-none shadow-none font-sans"
+                className="shadow-none font-sans"
               />
               <Button
                 onClick={handleAdd}
                 disabled={!newTopic.trim()}
-                className="rounded-none shadow-none font-sans gap-1.5"
+                className="shadow-none font-sans gap-1.5"
               >
                 <FiPlus className="w-4 h-4" />
                 Add
@@ -821,18 +1087,20 @@ function TopicsScreen({
         </Card>
 
         {/* Suggested Topics */}
-        <Card className="border rounded-none shadow-none">
+        <Card className="border shadow-none">
           <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base tracking-tight">Suggested Topics</CardTitle>
+            <CardTitle className="font-serif text-base tracking-[-0.02em]">Suggested Topics</CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-4 space-y-6">
             {Object.entries(SUGGESTED_TOPICS).map(([category, suggestedTopics]) => (
               <div key={category}>
-                <h4 className="font-serif text-sm font-bold tracking-tight mb-3 flex items-center gap-2">
-                  <FiHash className="w-3.5 h-3.5 text-muted-foreground" />
-                  {category}
-                </h4>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2" style={{ backgroundColor: CATEGORY_COLORS[category] ?? 'hsl(220, 10%, 45%)' }} />
+                  <h4 className="font-sans text-xs font-semibold uppercase tracking-widest" style={{ color: CATEGORY_COLORS[category] ?? 'hsl(220, 10%, 45%)' }}>
+                    {category}
+                  </h4>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {suggestedTopics.map((topic) => {
                     const isAdded = topics.includes(topic)
@@ -844,10 +1112,10 @@ function TopicsScreen({
                         }}
                         disabled={isAdded}
                         className={cn(
-                          'text-xs font-sans px-3 py-1.5 border transition-colors',
+                          'text-xs font-sans px-3 py-1.5 border transition-all duration-150',
                           isAdded
                             ? 'bg-primary text-primary-foreground border-primary cursor-default'
-                            : 'bg-card text-foreground border-border hover:bg-secondary cursor-pointer'
+                            : 'bg-card text-foreground border-border hover:border-primary/40 hover:scale-[1.02] cursor-pointer'
                         )}
                       >
                         {isAdded ? topic + ' \u2713' : topic}
@@ -873,11 +1141,13 @@ function SettingsScreen({
   onSetEmail,
   prefs,
   onSetPrefs,
+  activeAgentId,
 }: {
   email: string
   onSetEmail: (email: string) => void
   prefs: DigestPrefs
   onSetPrefs: (prefs: DigestPrefs) => void
+  activeAgentId: string | null
 }) {
   const [emailInput, setEmailInput] = useState(email)
   const [emailSaved, setEmailSaved] = useState(false)
@@ -930,7 +1200,6 @@ function SettingsScreen({
     loadLogs()
   }, [loadScheduleData, loadLogs])
 
-  // Sync emailInput when parent email changes
   useEffect(() => {
     setEmailInput(email)
   }, [email])
@@ -990,17 +1259,17 @@ function SettingsScreen({
       <div className="max-w-2xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-serif text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="font-sans text-muted-foreground mt-1 text-sm leading-relaxed">
+          <h1 className="font-serif text-4xl font-bold tracking-[-0.03em] mb-1">Settings</h1>
+          <p className="font-sans text-muted-foreground text-sm leading-relaxed">
             Configure email delivery, digest format, and schedule management.
           </p>
         </div>
 
         {/* Email */}
-        <Card className="border rounded-none shadow-none mb-6">
+        <Card className="border shadow-none mb-8">
           <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base tracking-tight flex items-center gap-2">
-              <FiMail className="w-4 h-4" />
+            <CardTitle className="font-serif text-base tracking-[-0.02em] flex items-center gap-2">
+              <FiMail className="w-4 h-4 text-primary" />
               Email Delivery
             </CardTitle>
           </CardHeader>
@@ -1014,28 +1283,28 @@ function SettingsScreen({
                   placeholder="you@example.com"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  className="rounded-none shadow-none font-sans"
+                  className="shadow-none font-sans"
                 />
                 <Button
                   onClick={handleSaveEmail}
                   variant="outline"
-                  className="rounded-none shadow-none font-sans"
+                  className="shadow-none font-sans"
                 >
                   Save
                 </Button>
               </div>
               {emailSaved && (
-                <p className="text-xs text-green-700 mt-1 font-sans">Email saved successfully.</p>
+                <p className="text-xs mt-1 font-sans" style={{ color: 'hsl(150, 50%, 38%)' }}>Email saved successfully.</p>
               )}
             </div>
           </CardContent>
         </Card>
 
         {/* Digest Preferences */}
-        <Card className="border rounded-none shadow-none mb-6">
+        <Card className="border shadow-none mb-8">
           <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base tracking-tight flex items-center gap-2">
-              <FiBookOpen className="w-4 h-4" />
+            <CardTitle className="font-serif text-base tracking-[-0.02em] flex items-center gap-2">
+              <FiBookOpen className="w-4 h-4" style={{ color: 'hsl(180, 45%, 35%)' }} />
               Digest Format
             </CardTitle>
           </CardHeader>
@@ -1089,10 +1358,10 @@ function SettingsScreen({
         </Card>
 
         {/* Schedule Management */}
-        <Card className="border rounded-none shadow-none mb-6">
+        <Card className="border shadow-none mb-8">
           <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base tracking-tight flex items-center gap-2">
-              <FiCalendar className="w-4 h-4" />
+            <CardTitle className="font-serif text-base tracking-[-0.02em] flex items-center gap-2">
+              <FiCalendar className="w-4 h-4" style={{ color: 'hsl(220, 70%, 45%)' }} />
               Schedule Management
             </CardTitle>
           </CardHeader>
@@ -1104,14 +1373,14 @@ function SettingsScreen({
 
             {scheduleLoading ? (
               <div className="space-y-3">
-                <Skeleton className="h-5 w-48 rounded-none" />
-                <Skeleton className="h-5 w-64 rounded-none" />
-                <Skeleton className="h-8 w-32 rounded-none" />
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-5 w-64" />
+                <Skeleton className="h-8 w-32" />
               </div>
             ) : scheduleError ? (
               <div>
                 <StatusMessage type="error" message={scheduleError} />
-                <Button variant="outline" className="mt-3 rounded-none shadow-none font-sans" onClick={loadScheduleData}>
+                <Button variant="outline" className="mt-3 shadow-none font-sans" onClick={loadScheduleData}>
                   <FiRefreshCw className="w-3.5 h-3.5 mr-1.5" />
                   Retry
                 </Button>
@@ -1120,27 +1389,27 @@ function SettingsScreen({
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground font-sans uppercase tracking-wide mb-1">Status</p>
-                    <Badge
-                      variant={schedule.is_active ? 'default' : 'secondary'}
-                      className="rounded-none font-sans text-xs"
-                    >
-                      {schedule.is_active ? 'Active' : 'Paused'}
-                    </Badge>
+                    <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest mb-1 font-medium">Status</p>
+                    <div className="flex items-center gap-2">
+                      <div className={cn('w-2 h-2 rounded-full', schedule.is_active ? 'bg-green-500' : 'bg-amber-500')} />
+                      <span className="text-sm font-sans font-semibold">
+                        {schedule.is_active ? 'Active' : 'Paused'}
+                      </span>
+                    </div>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-sans uppercase tracking-wide mb-1">Frequency</p>
-                    <p className="text-sm font-sans font-medium">
+                    <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest mb-1 font-medium">Frequency</p>
+                    <p className="text-sm font-sans font-semibold">
                       {schedule.cron_expression ? cronToHuman(schedule.cron_expression) : 'Unknown'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-sans uppercase tracking-wide mb-1">Timezone</p>
-                    <p className="text-sm font-sans font-medium">{schedule.timezone ?? 'Asia/Kolkata'}</p>
+                    <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest mb-1 font-medium">Timezone</p>
+                    <p className="text-sm font-sans font-semibold">{schedule.timezone ?? 'Asia/Kolkata'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-sans uppercase tracking-wide mb-1">Next Run</p>
-                    <p className="text-sm font-sans font-medium">
+                    <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest mb-1 font-medium">Next Run</p>
+                    <p className="text-sm font-sans font-semibold">
                       {schedule.next_run_time
                         ? new Date(schedule.next_run_time).toLocaleString()
                         : 'Not scheduled'}
@@ -1153,7 +1422,7 @@ function SettingsScreen({
                 <div className="flex gap-2">
                   <Button
                     variant={schedule.is_active ? 'outline' : 'default'}
-                    className="rounded-none shadow-none font-sans gap-1.5"
+                    className="shadow-none font-sans gap-1.5"
                     disabled={toggleLoading}
                     onClick={handleToggleSchedule}
                   >
@@ -1168,7 +1437,7 @@ function SettingsScreen({
                   </Button>
                   <Button
                     variant="outline"
-                    className="rounded-none shadow-none font-sans gap-1.5"
+                    className="shadow-none font-sans gap-1.5"
                     disabled={triggerLoading}
                     onClick={handleTriggerNow}
                   >
@@ -1188,17 +1457,17 @@ function SettingsScreen({
         </Card>
 
         {/* Run History */}
-        <Card className="border rounded-none shadow-none mb-6">
+        <Card className="border shadow-none mb-8">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="font-serif text-base tracking-tight flex items-center gap-2">
-                <FiActivity className="w-4 h-4" />
+              <CardTitle className="font-serif text-base tracking-[-0.02em] flex items-center gap-2">
+                <FiActivity className="w-4 h-4" style={{ color: 'hsl(35, 80%, 50%)' }} />
                 Run History
               </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-none shadow-none font-sans text-xs gap-1"
+                className="shadow-none font-sans text-xs gap-1"
                 onClick={loadLogs}
                 disabled={logsLoading}
               >
@@ -1212,22 +1481,25 @@ function SettingsScreen({
             {logsLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-12 w-full rounded-none" />
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
             ) : logs.length === 0 ? (
-              <p className="text-sm text-muted-foreground font-sans">
-                No execution history yet.
-              </p>
+              <div className="py-6 text-center">
+                <FiActivity className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground font-sans">
+                  No execution history yet.
+                </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {logs.map((log) => (
                   <div key={log.id} className="flex items-center justify-between p-3 border border-border bg-background">
                     <div className="flex items-center gap-3">
                       {log.success ? (
-                        <FiCheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        <FiCheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(150, 50%, 38%)' }} />
                       ) : (
-                        <FiAlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                        <FiAlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
                       )}
                       <div>
                         <p className="text-sm font-sans font-medium">
@@ -1249,9 +1521,9 @@ function SettingsScreen({
         </Card>
 
         {/* Agent Info */}
-        <Card className="border rounded-none shadow-none">
+        <Card className="border shadow-none">
           <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base tracking-tight">Agent Information</CardTitle>
+            <CardTitle className="font-serif text-base tracking-[-0.02em]">Agent Information</CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-4">
@@ -1260,19 +1532,19 @@ function SettingsScreen({
                 name="Research Digest Coordinator"
                 id={MANAGER_AGENT_ID}
                 role="Manager"
-                active={false}
+                active={activeAgentId === MANAGER_AGENT_ID}
               />
               <AgentInfoRow
                 name="ArXiv Research Agent"
                 id={ARXIV_AGENT_ID}
                 role="Sub-agent"
-                active={false}
+                active={activeAgentId === ARXIV_AGENT_ID}
               />
               <AgentInfoRow
                 name="Email Digest Agent"
                 id={EMAIL_AGENT_ID}
                 role="Sub-agent"
-                active={false}
+                active={activeAgentId === EMAIL_AGENT_ID}
               />
             </div>
           </CardContent>
@@ -1301,11 +1573,14 @@ export default function Page() {
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
   const [showSample, setShowSample] = useState(false)
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [scheduleActive, setScheduleActive] = useState<boolean | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   // Load from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      setMounted(true)
       try {
         const savedTopics = localStorage.getItem(LS_TOPICS_KEY)
         if (savedTopics) {
@@ -1326,7 +1601,29 @@ export default function Page() {
           }
         }
       } catch { /* ignore */ }
+
+      // Check onboarding
+      const onboarded = localStorage.getItem(LS_ONBOARDED_KEY)
+      if (onboarded !== 'true') {
+        setShowOnboarding(true)
+      }
     }
+  }, [])
+
+  // Fetch schedule status for header
+  useEffect(() => {
+    async function fetchScheduleStatus() {
+      try {
+        const result = await listSchedules({ agentId: MANAGER_AGENT_ID })
+        if (result.success && Array.isArray(result.schedules) && result.schedules.length > 0) {
+          const found = result.schedules.find(s => s.id === SCHEDULE_ID) ?? result.schedules[0]
+          setScheduleActive(found.is_active)
+        }
+      } catch {
+        // silent
+      }
+    }
+    fetchScheduleStatus()
   }, [])
 
   // Persist topics
@@ -1354,6 +1651,18 @@ export default function Page() {
     setTopics(prev => {
       if (prev.includes(topic)) return prev
       return [...prev, topic]
+    })
+  }
+
+  const addMultipleTopics = (newTopics: string[]) => {
+    setTopics(prev => {
+      const combined = [...prev]
+      for (const t of newTopics) {
+        if (!combined.includes(t)) {
+          combined.push(t)
+        }
+      }
+      return combined
     })
   }
 
@@ -1473,32 +1782,50 @@ export default function Page() {
     { id: 'settings' as const, label: 'Settings', icon: FiSettings },
   ]
 
+  const screenTitles: Record<string, string> = {
+    dashboard: 'Dashboard',
+    topics: 'Topics',
+    settings: 'Settings',
+  }
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground font-sans">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-background text-foreground flex">
-        {/* Sidebar */}
-        <aside className={cn('bg-card border-r border-border flex flex-col transition-all duration-200 flex-shrink-0', sidebarCollapsed ? 'w-16' : 'w-60')}>
-          {/* Logo / Brand */}
-          <div className="p-4 border-b border-border">
-            {sidebarCollapsed ? (
-              <button onClick={() => setSidebarCollapsed(false)} className="w-full flex justify-center py-1">
-                <FiBookOpen className="w-5 h-5" />
-              </button>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-serif text-lg font-bold tracking-tight leading-tight">ArXiv</h2>
-                  <p className="font-serif text-xs text-muted-foreground tracking-tight">Research Monitor</p>
-                </div>
-                <button onClick={() => setSidebarCollapsed(true)} className="text-muted-foreground hover:text-foreground p-1">
-                  <FiChevronLeft className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+      {showOnboarding && (
+        <OnboardingWizard
+          onComplete={() => setShowOnboarding(false)}
+          addTopics={addMultipleTopics}
+          setEmailFn={setEmail}
+        />
+      )}
+
+      <div className="h-screen flex overflow-hidden bg-background text-foreground">
+        {/* Dark Sidebar */}
+        <aside className="h-screen flex flex-col flex-shrink-0 w-64 border-r" style={{ ...SIDEBAR_BG, ...SIDEBAR_BORDER }}>
+          {/* Logo section */}
+          <div className="p-5 border-b" style={SIDEBAR_BORDER}>
+            <img
+              src={ARXIV_LOGO_URL}
+              alt="arXiv"
+              className="h-7 object-contain brightness-0 invert"
+            />
+            <p className="text-xs mt-1.5 font-sans" style={SIDEBAR_TEXT_MUTED}>
+              Research Monitor
+            </p>
           </div>
 
-          {/* Nav */}
-          <nav className="flex-1 py-4">
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto py-3">
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = activeScreen === item.id
@@ -1506,92 +1833,98 @@ export default function Page() {
                 <button
                   key={item.id}
                   onClick={() => setActiveScreen(item.id)}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-4 py-2.5 text-sm font-sans transition-colors',
-                    sidebarCollapsed && 'justify-center px-0',
-                    isActive
-                      ? 'bg-secondary text-foreground font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                  )}
+                  className="w-full flex items-center gap-3 px-5 py-2.5 text-sm font-sans transition-colors relative"
+                  style={isActive ? SIDEBAR_TEXT_ACTIVE : SIDEBAR_TEXT}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = SIDEBAR_HOVER_BG
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                    }
+                  }}
                 >
+                  {isActive && (
+                    <div className="absolute left-0 top-1 bottom-1 w-0.5" style={{ backgroundColor: 'hsl(355, 75%, 50%)' }} />
+                  )}
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  {!sidebarCollapsed && <span>{item.label}</span>}
+                  <span className={isActive ? 'font-medium' : ''}>{item.label}</span>
                 </button>
               )
             })}
           </nav>
 
           {/* Sample Data Toggle */}
-          <div className={cn('border-t border-border p-4', sidebarCollapsed && 'px-2')}>
-            {sidebarCollapsed ? (
-              <div className="flex justify-center">
-                <Switch
-                  checked={showSample}
-                  onCheckedChange={setShowSample}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-sans text-muted-foreground">Sample Data</Label>
-                <Switch
-                  checked={showSample}
-                  onCheckedChange={setShowSample}
-                />
-              </div>
-            )}
+          <div className="border-t px-5 py-4" style={SIDEBAR_BORDER}>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-sans" style={SIDEBAR_TEXT_MUTED}>Sample Data</Label>
+              <Switch
+                checked={showSample}
+                onCheckedChange={setShowSample}
+              />
+            </div>
           </div>
 
           {/* Agent status */}
-          {!sidebarCollapsed && (
-            <div className="border-t border-border p-4">
-              <p className="text-xs font-sans text-muted-foreground uppercase tracking-wide mb-2">Agents</p>
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <div className={cn('w-1.5 h-1.5 rounded-full', activeAgentId === MANAGER_AGENT_ID ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground/30')} />
-                  <span className="text-xs font-sans text-muted-foreground">Coordinator</span>
+          <div className="border-t px-5 py-4" style={SIDEBAR_BORDER}>
+            <p className="text-xs font-sans uppercase tracking-widest mb-3 font-medium" style={SIDEBAR_TEXT_MUTED}>Agents</p>
+            <div className="space-y-2">
+              {[
+                { name: 'Coordinator', id: MANAGER_AGENT_ID },
+                { name: 'ArXiv Agent', id: ARXIV_AGENT_ID },
+                { name: 'Email Agent', id: EMAIL_AGENT_ID },
+              ].map(agent => (
+                <div key={agent.id} className="flex items-center gap-2">
+                  <div className={cn('w-1.5 h-1.5 rounded-full', activeAgentId === agent.id ? 'bg-green-400 animate-pulse' : 'bg-white/15')} />
+                  <span className="text-xs font-sans" style={SIDEBAR_TEXT_MUTED}>{agent.name}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className={cn('w-1.5 h-1.5 rounded-full', activeAgentId === ARXIV_AGENT_ID ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground/30')} />
-                  <span className="text-xs font-sans text-muted-foreground">ArXiv Agent</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className={cn('w-1.5 h-1.5 rounded-full', activeAgentId === EMAIL_AGENT_ID ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground/30')} />
-                  <span className="text-xs font-sans text-muted-foreground">Email Agent</span>
-                </div>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col min-w-0">
-          {activeScreen === 'dashboard' && (
-            <DashboardScreen
-              topics={topics}
-              digestResponse={digestResponse}
-              loading={loading}
-              loadingText={loadingText}
-              statusMsg={statusMsg}
-              onPreview={handlePreview}
-              onSendNow={handleSendNow}
-              showSample={showSample}
-            />
-          )}
-          {activeScreen === 'topics' && (
-            <TopicsScreen
-              topics={topics}
-              onAddTopic={addTopic}
-              onRemoveTopic={removeTopic}
-            />
-          )}
-          {activeScreen === 'settings' && (
-            <SettingsScreen
-              email={email}
-              onSetEmail={setEmail}
-              prefs={prefs}
-              onSetPrefs={setPrefs}
-            />
-          )}
+        <main className="flex-1 h-screen flex flex-col min-w-0">
+          {/* Header Bar */}
+          <HeaderBar
+            screenTitle={screenTitles[activeScreen] ?? 'Dashboard'}
+            email={email}
+            scheduleActive={scheduleActive}
+          />
+
+          {/* Screen content */}
+          <div className="flex-1 overflow-y-auto">
+            {activeScreen === 'dashboard' && (
+              <DashboardScreen
+                topics={topics}
+                digestResponse={digestResponse}
+                loading={loading}
+                loadingText={loadingText}
+                statusMsg={statusMsg}
+                onPreview={handlePreview}
+                onSendNow={handleSendNow}
+                showSample={showSample}
+              />
+            )}
+            {activeScreen === 'topics' && (
+              <TopicsScreen
+                topics={topics}
+                onAddTopic={addTopic}
+                onRemoveTopic={removeTopic}
+              />
+            )}
+            {activeScreen === 'settings' && (
+              <SettingsScreen
+                email={email}
+                onSetEmail={setEmail}
+                prefs={prefs}
+                onSetPrefs={setPrefs}
+                activeAgentId={activeAgentId}
+              />
+            )}
+          </div>
         </main>
       </div>
     </ErrorBoundary>
