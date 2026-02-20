@@ -1,0 +1,26 @@
+{
+  "agents": {
+    "manager": {
+      "name": "Research Digest Coordinator",
+      "agent_id": "6997cf886d697c9f3c2dac7f",
+      "type": "manager"
+    },
+    "arxiv_agent": {
+      "name": "ArXiv Research Agent",
+      "agent_id": "6997cf73b750be5d2dde15ec",
+      "type": "sub-agent"
+    },
+    "email_agent": {
+      "name": "Email Digest Agent",
+      "agent_id": "6997cf74ec13e82222688966",
+      "type": "sub-agent"
+    }
+  },
+  "schedule": {
+    "schedule_id": "6997cf8d399dfadeac37c226",
+    "agent_id": "6997cf886d697c9f3c2dac7f",
+    "cron_expression": "0 8 * * 1",
+    "timezone": "Asia/Kolkata",
+    "message": "Run the weekly research digest. Search ArXiv for all active topics and send the compiled email digest. Mode: full_digest."
+  }
+}

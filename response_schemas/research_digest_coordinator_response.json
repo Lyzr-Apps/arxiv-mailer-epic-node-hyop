@@ -1,0 +1,56 @@
+{
+  "agent_name": "Research Digest Coordinator",
+  "agent_id": "6997cf886d697c9f3c2dac7f",
+  "description": "Coordinates the ArXiv search and email composition workflow \u2014 routes user topics to the research agent, collects paper results, passes them to the email agent for digest formatting and delivery",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "mode": "string",
+    "topics_searched": "number",
+    "total_papers_found": "number",
+    "topics_results": [
+      {
+        "topic": "string",
+        "papers_found": "number",
+        "papers": [
+          {
+            "title": "string",
+            "authors": "string",
+            "abstract": "string",
+            "key_insight": "string",
+            "arxiv_link": "string",
+            "categories": "string"
+          }
+        ]
+      }
+    ],
+    "email_sent": "boolean",
+    "email_status": "string",
+    "digest_date": "string"
+  },
+  "example_response": {
+    "mode": "sample string",
+    "topics_searched": 0,
+    "total_papers_found": 0,
+    "topics_results": [
+      {
+        "topic": "sample string",
+        "papers_found": 0,
+        "papers": [
+          {
+            "title": "sample string",
+            "authors": "sample string",
+            "abstract": "sample string",
+            "key_insight": "sample string",
+            "arxiv_link": "sample string",
+            "categories": "sample string"
+          }
+        ]
+      }
+    ],
+    "email_sent": false,
+    "email_status": "sample string",
+    "digest_date": "sample string"
+  }
+}

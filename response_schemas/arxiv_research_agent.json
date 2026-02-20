@@ -1,0 +1,51 @@
+{
+  "agent_name": "ArXiv Research Agent",
+  "agent_id": "6997cf73b750be5d2dde15ec",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "AgentResponse",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "topics_results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "topic": { "type": "string" },
+                "papers_found": { "type": "number" },
+                "papers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": { "type": "string" },
+                      "authors": { "type": "string" },
+                      "abstract": { "type": "string" },
+                      "key_insight": { "type": "string" },
+                      "arxiv_link": { "type": "string" },
+                      "categories": { "type": "string" }
+                    },
+                    "required": ["title", "authors", "abstract", "key_insight", "arxiv_link", "categories"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["topic", "papers_found", "papers"],
+              "additionalProperties": false
+            }
+          },
+          "total_papers": { "type": "number" },
+          "search_date": { "type": "string" }
+        },
+        "required": ["topics_results", "total_papers", "search_date"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

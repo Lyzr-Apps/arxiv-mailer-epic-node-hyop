@@ -1,0 +1,28 @@
+{
+  "agent_name": "Email Digest Agent",
+  "agent_id": "6997cf74ec13e82222688966",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "AgentResponse",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "email_sent": { "type": "boolean" },
+          "recipient_email": { "type": "string" },
+          "subject": { "type": "string" },
+          "email_body_html": { "type": "string" },
+          "papers_included": { "type": "number" },
+          "topics_covered": { "type": "number" },
+          "delivery_status": { "type": "string" }
+        },
+        "required": ["email_sent", "recipient_email", "subject", "email_body_html", "papers_included", "topics_covered", "delivery_status"],
+        "additionalProperties": false
+      }
+    }
+  }
+}
